@@ -1,5 +1,5 @@
 #!/bin/bash
-# 20190905,09
+# 20190905,09,17
 # single-node
 # run as root
 
@@ -7,6 +7,7 @@
 # https://kubernetes.io/docs/setup/production-environment/container-runtimes/
 # https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 
+cd
 cat > /etc/modules-load.d/containerd.conf <<EOF
 overlay
 br_netfilter
@@ -30,6 +31,15 @@ containerd config default > /etc/containerd/config.toml
 
 systemctl restart containerd
 
+apt-get update && apt-get install -y apt-transport-https curl
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
+deb https://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+apt-get update
+apt-get install -y kubelet kubeadm kubectl
+apt-mark hold kubelet kubeadm kubectl
+
 kubeadm init
 # ...
 #Your Kubernetes control-plane has initialized successfully!
@@ -49,6 +59,7 @@ kubeadm init
 #kubeadm join 10.0.0.78:6443 --token yn98tp.4z7arx6tjk5btd9b \
 #    --discovery-token-ca-cert-hash sha256:55b7abf73b35569ed470ca61b7fd89c7d44ddc784f70bbdf8dc9bf8830165430
 #...
+
 mkdir -p $HOME/.kube
 cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 chown $(id -u):$(id -g) $HOME/.kube/config
@@ -56,4 +67,5 @@ kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl versio
 
 # remove the NoSchedule taint or join worker node
 kubectl taint node $HOSTNAME node-role.kubernetes.io/master:NoSchedule-
+
 #kubeadm join 10.0.0.78:6443 --token yn98tp.4z7arx6tjk5btd9b --discovery-token-ca-cert-hash sha256:55b7abf73b35569ed470ca61b7fd89c7d44ddc784f70bbdf8dc9bf8830165430 --cri-socket /var/run/containerd/containerd.sock
